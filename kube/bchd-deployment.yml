@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: default
+  labels:
+    service: cbdc
+    version: 0.16.5
+  name: cbdc
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      service: cbdc
+  template:
+    metadata:
+      labels:
+        service: cbdc
+    spec:
+      containers:
+      - env:
+        - name: BCHD_RPC_USER
+          valueFrom:
+            secretKeyRef:
+              name: cbdc
+              key: rpcuser
+        - name: BCHD_RPC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cbdc
+              key: rpcpass
+        image: zquestz/cbdc:latest
+        command: ["cbdc"]
+        args: ["-u", "$(BCHD_RPC_USER)", "-P", "$(BCHD_RPC_PASSWORD)", "--addrindex", "--txindex", "-b", "/data", "-C", "/data/cbdc.conf"]
+        name: cbdc
+        volumeMounts:
+          - mountPath: /data
+            name: cbdc-data
+        resources:
+          requests:
+            memory: "3Gi"
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 600
+      volumes:
+        - name: cbdc-data
+          gcePersistentDisk:
+            pdName: cbdc-data
+            fsType: ext4
